@@ -52,10 +52,10 @@ install() {
     local cache_file_checksum_expect=""
 
     case $DESKTOP_CORE_VERSION in
-    v1.2.0)
+    latest)
       case $arch in
       arm64)
-        cache_file_checksum_expect="f21853977b755dc8e0dfdcd218b3780808812673da92f669458e784a5cb752ee"
+        cache_file_checksum_expect="0db984184009a25fd2f848e600fce80c3356304eb5928d1e7787f03dca12c135"
         ;;
       amd64)
         cache_file_checksum_expect="f21853977b755dc8e0dfdcd218b3780808812673da92f669458e784a5cb752ee"
@@ -73,7 +73,6 @@ install() {
   if [ "$is_cached" = "true" ]; then
     log::info "[$(timestamp)][desktop][$name] found cache at $cache_file ..."
   else
-    # reference: https://github.com/9seconds/iterm2/releases
     # example:
     #   https://dl.pstmn.io/download/latest/osx_64
     #   https://dl.pstmn.io/download/latest/osx_arm64
@@ -81,10 +80,10 @@ install() {
     local url=""
     case $arch in
     arm64)
-      url="https://dl.pstmn.io/download/latest/osx_64"
+      url="https://dl.pstmn.io/download/latest/osx_arm64"
       ;;
     amd64)
-      url="https://dl.pstmn.io/download/latest/osx_arm64"
+      url="https://dl.pstmn.io/download/latest/osx_64"
       ;;
     *)
       log::error "[$(timestamp)] unsupport arch: $arch"
@@ -99,20 +98,31 @@ install() {
     os::download $cache_file $url
   fi
 
+  local app_name="Postman.app"
   # install
   log::info "[$(timestamp)][desktop][$name] installing $cache_file ..."
   case $arch in
   arm64)
-    install::zip $cache_file ${name} Postman.app 
+    install::zip $cache_file ${name} ${app_name}
     ;;
   amd64)
-    install::zip $cache_file ${name} Postman.app 
+    install::zip $cache_file ${name} ${app_name}
     ;;
   *)
     log::error "[$(timestamp)] unsupport arch: $arch"
     return 1
     ;;
   esac
+
+  # actve
+  log::info "[$(timestamp)][desktop] active app without warning which app is damaged and can't be opened ..."
+  sudo xattr -rd com.apple.quarantine /Applications/${app_name}
+  if [ "$?" != "0" ]; then
+    log::error "[$(timestamp)][desktop] failed to active app: ${app_name} (command: sudo xattr -rd com.apple.quarantine /Applications/${app_name})."
+    return 1
+  fi
+  log::warn "[$(timestamp)][desktop] if it still has warning, please go to System Preferences -> Security & Privacy -> General, and click Open Anyway button."
+
 
   # clean
   log::info "[$(timestamp)][desktop][$name] cleaning ..."
